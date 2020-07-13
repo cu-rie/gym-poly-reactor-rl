@@ -24,26 +24,31 @@ if __name__ == '__main__':
 
     state = env.reset()
 
-    state_trajectory = []
-    action_trajectory = []
-
     reward_trajectory = []
-    
+
     critic_loss_traj = []
     actor_loss_traj = []
 
     # while True:
-    for _ in range(1000):
+    for _ in range(100):
         state = env.reset()
         sum_reward = 0
+        state_trajectory = []
+        action_trajectory = []
         while True:
+
             state_tensor = torch.Tensor(state).reshape(1, -1)
             nn_action, action = agent.get_action(state_tensor)
-            next_state, reward, done, _ = env.step(action)
+            action_numpy = action.numpy()
+            next_state, reward, done, _ = env.step(action_numpy.reshape(-1, 1))
+
+            state_trajectory.append(state.reshape(-1))
+            action_trajectory.append(action.reshape(-1))
 
             agent.save_transition((state_tensor, nn_action, reward, next_state, done))
 
             sum_reward += reward
+            state = next_state
 
             if agent.train_start():
                 critic_loss, actor_loss = agent.fit()
@@ -51,11 +56,8 @@ if __name__ == '__main__':
                 critic_loss_traj.append(critic_loss)
                 actor_loss_traj.append(actor_loss)
 
-                # print("critic loss:{}, actor loss:{}".format(critic_loss, actor_loss))
-
             if done:
                 reward_trajectory.append(sum_reward)
-                print(sum_reward)
                 break
 
     # plotting state
@@ -80,3 +82,18 @@ if __name__ == '__main__':
         ax.plot(action_trajectory[:, i])
 
     plt.savefig('action.png')
+
+    fig = plt.figure()
+    ax = fig.add_subplot()
+    ax.plot(critic_loss_traj)
+    plt.savefig('critic_loss.png')
+
+    fig = plt.figure()
+    ax = fig.add_subplot()
+    ax.plot(actor_loss_traj)
+    plt.savefig('actor_loss.png')
+
+    fig = plt.figure()
+    ax = fig.add_subplot()
+    ax.plot(reward_trajectory)
+    plt.savefig('reward.png')

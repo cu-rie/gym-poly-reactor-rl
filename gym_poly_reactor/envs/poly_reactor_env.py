@@ -54,27 +54,41 @@ class PolyReactor(gym.Env):
         self.m_p_old = m_P_INIT
         self.m_p_new = None
         self.T_adiab = T_adiab_INIT
+        self.t = 0
+
+        self.normalize_state = np.array(
+            [m_W_INIT, m_A_INIT, m_P_INIT, T_R_INIT, T_S_INIT, T_M_INIT, T_EK_INIT, T_AWT_INIT, T_adiab_INIT,
+             m_acc_F_INIT]).reshape(-1, 1)
 
     def step(self, action: np.array):
+
+        self.t += 1
 
         if action.ndim == 1:
             action = np.reshape(action, (-1, 1))
 
-        state_new = self.simulator.make_step(action)
+        state_new = self.simulator.make_step(action) / self.normalize_state
         self.state = state_new
 
         self.m_p_new = state_new[2]  # will be used for checking safety conditions
         self.T_adiab = state_new[-1]  # will be used for checking safety conditions
 
         done, done_reward = self.check_done()
-        stage_reward = self.m_p_new - self.m_p_old
+        stage_reward = (self.m_p_new - self.m_p_old) / 100
+        # stage_reward = 0
         reward = stage_reward + done_reward
 
         return np.array(state_new).squeeze(), reward, done, {}
 
     def reset(self, random_init=False):
         self.simulator = get_simulator()
-        self.state = np.array(self.simulator.x0.master)
+        self.state = np.array(self.simulator.x0.master) / self.normalize_state
+
+        self.m_p_old = m_P_INIT
+        self.m_p_new = None
+        self.T_adiab = T_adiab_INIT
+        self.t = 0
+
         return self.state
 
     def render(self, mode='human'):
@@ -82,13 +96,14 @@ class PolyReactor(gym.Env):
 
     def check_done(self):
         done_state = np.abs(self.m_p_new - 20680) <= 1.0
-        done_safety = self.T_adiab >= 109 + ABS_ZERO
+        # TODO: proper time lock?
+        done_safety = self.T_adiab >= 109 + ABS_ZERO or self.t > 200
         done = done_state or done_safety
 
         if done_safety:
-            done_reward = -1000
+            done_reward = -100
         elif done_state:
-            done_reward = 1000
+            done_reward = 100
         else:
             done_reward = 0
 
