@@ -20,8 +20,8 @@ def get_simulator():
     Tout_M = model.set_variable('_x', 'Tout_M')
     T_EK = model.set_variable('_x', 'T_EK')
     Tout_AWT = model.set_variable('_x', 'Tout_AWT')
-    accum_monom = model.set_variable('_x', 'accum_monom')
     T_adiab = model.set_variable('_x', 'T_adiab')
+    accum_monom = model.set_variable('_x', 'accum_monom')
 
     # set control variables
     m_dot_f = model.set_variable('_u', 'm_dot_f')

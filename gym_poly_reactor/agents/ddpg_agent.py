@@ -10,6 +10,47 @@ def update_target(target_params, source_params, tau=0.1):
         pass
 
 
+class OUNoise:
+
+    """
+    Taken from https://github.com/vitchyr/rlkit/blob/master/rlkit/exploration_strategies/ou_strategy.py
+    """
+
+    def __init__(self, action_space, mu=0.0, theta=0.15, max_sigma=0.3, min_sigma=0.3, decay_period=1000):
+        self.mu = mu
+        self.theta = theta
+        self.sigma = max_sigma
+        self.max_sigma = max_sigma
+        self.min_sigma = min_sigma
+        self.decay_period = decay_period
+        self.action_dim = action_space
+        self.reset()
+
+        self.epsilon = 1.0
+        self.epsilon_decay = 0.000005
+        self.epsilon_min = 0.0
+
+    def reset(self):
+        self.state = np.ones(self.action_dim) * self.mu
+
+    def evolve_state(self):
+        x = self.state
+        dx = self.theta * (self.mu - x) + self.sigma * np.random.randn(self.action_dim)
+        self.state = x + dx
+        return self.state
+
+    def get_action(self, action, t=0):
+
+        ou_state = self.evolve_state() * self.epsilon
+
+        self.epsilon -= self.epsilon_decay
+        if self.epsilon < self.epsilon_min:
+            self.epsilon = self.epsilon_min
+
+        self.sigma = self.max_sigma - (self.max_sigma - self.min_sigma) * min(1.0, t / self.decay_period)
+        return np.clip(action + ou_state, -1.0, 1.0)
+
+
 class ReplayMemory:
     def __init__(self, length):
         self.memory = deque(maxlen=length)
@@ -47,9 +88,9 @@ class ReplayMemory:
         terminal = np.array(terminal).astype(int)
         terminal = torch.tensor(terminal).reshape(-1, 1)
 
-        # action = np.array(action)
+        action = np.array(action)
         # action = torch.tensor(action, dtype=torch.float32).reshape(-1, 1)
-        action = torch.stack(action).squeeze().float()
+        action = torch.tensor(action).squeeze().float()
 
         return state, action, reward, next_state, terminal
 
@@ -60,6 +101,7 @@ class DDPGAgent(nn.Module):
         self.action_min = np.array(action_min)
         self.action_max = np.array(action_max)
         self.gamma = gamma
+        self.ou_noise = OUNoise(3)
 
         self.critic = Critic(state_dim, action_dim)
         self.actor = Actor(state_dim, action_dim)
@@ -79,12 +121,13 @@ class DDPGAgent(nn.Module):
 
         self.loss_ftn = nn.MSELoss()
 
-    def get_action(self, state):
-        action_before_norm = self.actor(state)
+    def get_action(self, state, t=0):
+        action_before_norm = self.actor(state).detach().numpy()
+        action_before_norm = self.ou_noise.get_action(action_before_norm, t)
 
-        action_after_norm = (action_before_norm.data + 1) / 2 * (self.action_max - self.action_min) + self.action_min
+        action_after_norm = (action_before_norm + 1) / 2 * (self.action_max - self.action_min) + self.action_min
 
-        return action_before_norm.data, action_after_norm.data
+        return action_before_norm, action_after_norm, self.ou_noise.epsilon
 
     def save_transition(self, transition):
         self.memory.save_memory(transition)

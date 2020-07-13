@@ -49,6 +49,7 @@ class PolyReactor(gym.Env):
         self.action_space = spaces.Box(low=act_low, high=act_high)
 
         self.state = None
+        self.unnormalized_state = None
         self.simulator = None
 
         self.m_p_old = m_P_INIT
@@ -57,8 +58,9 @@ class PolyReactor(gym.Env):
         self.t = 0
 
         self.normalize_state = np.array(
-            [m_W_INIT, m_A_INIT, m_P_INIT, T_R_INIT, T_S_INIT, T_M_INIT, T_EK_INIT, T_AWT_INIT, T_adiab_INIT,
-             m_acc_F_INIT]).reshape(-1, 1)
+            [m_W_INIT, m_A_INIT, m_P_INIT,
+             T_R_INIT, T_S_INIT, T_M_INIT,
+             T_EK_INIT, T_AWT_INIT, T_adiab_INIT, m_acc_F_INIT]).reshape(-1, 1)
 
     def step(self, action: np.array):
 
@@ -67,22 +69,27 @@ class PolyReactor(gym.Env):
         if action.ndim == 1:
             action = np.reshape(action, (-1, 1))
 
-        state_new = self.simulator.make_step(action) / self.normalize_state
-        self.state = state_new
+        state_new_before_normize = self.simulator.make_step(action)
 
-        self.m_p_new = state_new[2]  # will be used for checking safety conditions
-        self.T_adiab = state_new[-1]  # will be used for checking safety conditions
+        self.unnormalized_state = state_new_before_normize
+        self.state = state_new_before_normize / self.normalize_state
+
+        self.m_p_new = state_new_before_normize[2]  # will be used for checking safety conditions
+        self.T_adiab = state_new_before_normize[-2]  # will be used for checking safety conditions
 
         done, done_reward = self.check_done()
-        stage_reward = (self.m_p_new - self.m_p_old) / 100
+        stage_reward = (self.m_p_new - self.m_p_old)
+
+        self.m_p_old = self.m_p_new
         # stage_reward = 0
         reward = stage_reward + done_reward
 
-        return np.array(state_new).squeeze(), reward, done, {}
+        return np.array(self.state).squeeze(), reward, done, {"unnormalized_state": self.unnormalized_state}
 
     def reset(self, random_init=False):
         self.simulator = get_simulator()
         self.state = np.array(self.simulator.x0.master) / self.normalize_state
+        self.unnormalized_state = np.array(self.simulator.x0.master)
 
         self.m_p_old = m_P_INIT
         self.m_p_new = None
@@ -95,14 +102,16 @@ class PolyReactor(gym.Env):
         raise NotImplementedError("This environment does not support rendering")
 
     def check_done(self):
-        done_state = np.abs(self.m_p_new - 20680) <= 1.0
+        done_state = self.m_p_new > 20680
+        # done_state = np.abs(self.m_p_new - 20680) <= 1.0
         # TODO: proper time lock?
-        done_safety = self.T_adiab >= 109 + ABS_ZERO or self.t > 200
+        done_safety = self.T_adiab >= 109 + ABS_ZERO or self.t > 10000
         done = done_state or done_safety
 
         if done_safety:
             done_reward = -100
         elif done_state:
+            print("well done!")
             done_reward = 100
         else:
             done_reward = 0
