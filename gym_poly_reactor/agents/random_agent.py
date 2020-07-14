@@ -1,12 +1,11 @@
-# import torch
 import numpy as np
 
 
 class RandomAgent():
-    def __init__(self, state_dim, action_min: list, action_max: list):
-        self.action_min = action_min
-        self.action_max = action_max
+    def __init__(self, state_dim, action_low: list, action_high: list):
+        self.action_low = action_low
+        self.action_high = action_high
 
     def get_action(self, state):
-        action = np.random.uniform(low=self.action_min, high=self.action_max)
+        action = np.random.uniform(low=self.action_low, high=self.action_high)
         return action

@@ -11,7 +11,6 @@ def update_target(target_params, source_params, tau=0.1):
 
 
 class OUNoise:
-
     """
     Taken from https://github.com/vitchyr/rlkit/blob/master/rlkit/exploration_strategies/ou_strategy.py
     """
@@ -40,7 +39,6 @@ class OUNoise:
         return self.state
 
     def get_action(self, action, t=0):
-
         ou_state = self.evolve_state() * self.epsilon
 
         self.epsilon -= self.epsilon_decay
@@ -96,10 +94,10 @@ class ReplayMemory:
 
 
 class DDPGAgent(nn.Module):
-    def __init__(self, state_dim, action_dim, action_min: list, action_max: list, gamma=0.99):
+    def __init__(self, state_dim, action_dim, action_low: list, action_high: list, gamma=0.99):
         super(DDPGAgent, self).__init__()
-        self.action_min = np.array(action_min)
-        self.action_max = np.array(action_max)
+        self.action_low = action_low
+        self.action_high = action_high
         self.gamma = gamma
         self.ou_noise = OUNoise(3)
 
@@ -125,7 +123,7 @@ class DDPGAgent(nn.Module):
         action_before_norm = self.actor(state).detach().numpy()
         action_before_norm = self.ou_noise.get_action(action_before_norm, t)
 
-        action_after_norm = (action_before_norm + 1) / 2 * (self.action_max - self.action_min) + self.action_min
+        action_after_norm = (action_before_norm + 1) / 2 * (self.action_high - self.action_min) + self.action_min
 
         return action_before_norm, action_after_norm, self.ou_noise.epsilon
 
