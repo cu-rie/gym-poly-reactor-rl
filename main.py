@@ -4,9 +4,9 @@ import numpy as np
 from gym_poly_reactor.envs.poly_reactor_env import PolyReactor
 
 if __name__ == '__main__':
-    abs_zero = 273.15
+
     env = PolyReactor()
-    s0 = env.reset()
+    _ = env.reset()
     len_episode = 100
 
     state_trajectory = []
