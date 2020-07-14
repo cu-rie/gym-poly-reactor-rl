@@ -6,16 +6,15 @@ from gym_poly_reactor.agents.random_agent import RandomAgent
 
 if __name__ == '__main__':
     # Action space
-    abs_zero = 273.15
-    m_DOT_F_MIN, m_DOT_F_MAX = 0, 30000  # [kgh^-1]
-    T_IN_M_MIN, T_IN_M_MAX = 60 + abs_zero, 100 + abs_zero  # [Kelvin]
-    T_IN_AWT_MIN, T_IN_AWT_MAX = 60 + abs_zero, 100 + abs_zero  # [Kelvin]
-
-    action_min = [m_DOT_F_MIN, T_IN_M_MIN, T_IN_AWT_MIN]
-    action_max = [m_DOT_F_MAX, T_IN_M_MAX, T_IN_AWT_MAX]
 
     env = PolyReactor()
-    agent = RandomAgent(state_dim=10, action_min=action_min, action_max=action_max)
+
+    state_dim = env.observation_space.shape[0]
+
+    action_low = env.action_space.low
+    action_high = env.action_space.high
+
+    agent = RandomAgent(state_dim=state_dim, action_low=action_low, action_high=action_high)
 
     state = env.reset()
 
