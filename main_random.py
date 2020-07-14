@@ -30,7 +30,7 @@ if __name__ == '__main__':
         action_trajectory.append(action)
 
         if done:
-            break
+            break 
 
     # plotting state
     state_dim = env.observation_space.shape[0]
