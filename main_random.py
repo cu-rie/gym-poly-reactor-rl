@@ -9,10 +9,12 @@ if __name__ == '__main__':
 
     env = PolyReactor()
 
+    state_dim = env.observation_space.shape[0]
+
     action_low = env.action_space.low
     action_high = env.action_space.high
 
-    agent = RandomAgent(state_dim=10, action_low=action_low, action_high=action_high)
+    agent = RandomAgent(state_dim=state_dim, action_low=action_low, action_high=action_high)
 
     state = env.reset()
 
