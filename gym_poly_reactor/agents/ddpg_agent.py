@@ -123,7 +123,7 @@ class DDPGAgent(nn.Module):
         action_before_norm = self.actor(state).detach().numpy()
         action_before_norm = self.ou_noise.get_action(action_before_norm, t)
 
-        action_after_norm = (action_before_norm + 1) / 2 * (self.action_high - self.action_min) + self.action_min
+        action_after_norm = (action_before_norm + 1) / 2 * (self.action_high - self.action_low) + self.action_low
 
         return action_before_norm, action_after_norm, self.ou_noise.epsilon
 
