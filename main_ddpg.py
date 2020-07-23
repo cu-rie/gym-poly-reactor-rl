@@ -39,7 +39,7 @@ if __name__ == '__main__':
     agent.ou_noise.reset()
     start_time = time.time()
 
-    for i in range(1000):
+    for i in range(200):
         state = env.reset()
 
         sum_reward = 0
@@ -66,12 +66,14 @@ if __name__ == '__main__':
 
             if agent.train_start():
                 critic_loss, actor_loss = agent.fit()
-                critic_loss_traj.append(critic_loss)
-                actor_loss_traj.append(actor_loss)
 
             if done:
                 reward_trajectory.append(sum_reward)
+                if agent.train_start():
+                    critic_loss_traj.append(critic_loss)
+                    actor_loss_traj.append(actor_loss)
                 len_episodes.append(t)
+
                 print(i, "%.3f, %.3f, %.3f" % (sum_reward, epsilon, reward))
                 print(time.time() - start_time)
                 break
