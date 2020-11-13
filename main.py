@@ -7,7 +7,7 @@ if __name__ == '__main__':
 
     env = PolyReactor()
     _ = env.reset()
-    len_episode = 100
+    len_episode = 10000
 
     state_trajectory = []
     action_trajectory = []
@@ -15,7 +15,7 @@ if __name__ == '__main__':
     step = 0
 
     # while True:
-    for _ in range(10000):
+    for _ in range(len_episode):
         action = env.action_space.sample()
         next_state, _, done, _ = env.step(action)
 
